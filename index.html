@@ -118,6 +118,14 @@ label{display:block;font-size:12px;color:var(--mu);margin:12px 0 5px}
 .accent{border-color:rgba(122,168,255,.45);background:linear-gradient(180deg,rgba(79,124,255,.16),rgba(79,124,255,.05))}
 .cli{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .cli .btn{flex:none}
+.install{display:flex;align-items:center;gap:12px;justify-content:space-between;border-color:rgba(122,168,255,.4);background:linear-gradient(180deg,rgba(79,124,255,.16),rgba(79,124,255,.05))}
+.install .acts{display:flex;align-items:center;gap:4px;flex:none}
+.x{width:32px;height:32px;border-radius:10px;border:0;background:none;color:var(--mu);font-size:22px;line-height:1;cursor:pointer}
+.steps{margin:14px 0 0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;line-height:1.45}
+.steps li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:9px;background:rgba(79,124,255,.28);border:1px solid rgba(122,168,255,.4);display:grid;place-items:center;font-weight:700;font-size:13px}
+.steps svg{width:18px;height:18px;vertical-align:-3px}
+.sec2{margin:22px 0 2px;font-size:12px;font-weight:650;color:var(--mu);text-transform:uppercase;letter-spacing:.08em}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -180,7 +188,7 @@ const TABS=['hoje','aparelhos','clientes','numeros'];
 const TITLES={hoje:'Hoje',aparelhos:'Aparelhos',clientes:'Clientes',numeros:'Números'};
 
 /* ---------- dados ---------- */
-const DEF={shop:'Assistência da Carol',google:'',sound:true,returnDays:60,demo:false};
+const DEF={shop:'Assistência da Carol',google:'',sound:true,returnDays:60,demo:false,reminderTime:'08:30',reminderDays:'seg-sab',installDismissed:false};
 let S;
 const load=()=>{try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);if(o&&Array.isArray(o.items))return o}}catch(e){}return null};
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -307,6 +315,7 @@ function rHoje(){
   <div class="stats"><div class="stat"><b data-count="${and.length}">${and.length}</b><span>Em andamento</span></div>
   <div class="stat ok"><b data-count="${pro.length}">${pro.length}</b><span>Prontos</span></div>
   <div class="stat ${late.length?'bad':''}"><b data-count="${late.length}">${late.length}</b><span>Atrasados</span></div></div></div>`;
+ if(!isStandalone()&&!S.settings.installDismissed)h+=`<div class="card install${R(i++)}"><div><b>Instale como app</b><div class="sub">Um toque na tela inicial, sem abrir o navegador.</div></div><div class="acts"><button class="btn sm" data-act="install">Instalar</button><button class="x" data-act="dismiss-install" aria-label="Dispensar">×</button></div></div>`;
  if(!it.length)h+=`<div class="card empty${R(i++)}"><div>Nenhum conserto cadastrado ainda.</div><button class="btn" data-act="new">Cadastrar o primeiro</button></div>`;
  if(list.length){h+=`<h3 class="sec${R(i++)}">Pra entregar hoje</h3>`;list.forEach(x=>h+=itemCard(x,i++))}
  if(pro.length){h+=`<h3 class="sec${R(i++)}">Esperando retirada</h3>`;pro.forEach(x=>h+=itemCard(x,i++))}
@@ -483,7 +492,15 @@ function openSettings(){
   <label for="s-google">Link de avaliação do Google</label><input id="s-google" inputmode="url" value="${esc(S.settings.google)}" placeholder="Cole aqui o link do Google" autocomplete="off">
   <div class="hint">É o link que vai na mensagem do botão “Pedir avaliação”.</div>
   <label for="s-days">Chamar de volta depois de quantos dias?</label><input id="s-days" type="number" inputmode="numeric" min="15" max="365" value="${S.settings.returnDays}">
-  <div class="hint" style="margin-top:14px">Os dados ficam só neste celular. Faça o backup de vez em quando.</div>
+  <div class="sec2">Instalar</div>
+  <div class="actions" style="margin-top:8px">${isStandalone()?'<button class="btn ghost" disabled>App instalado ✓</button>':'<button class="btn" data-act="install">Instalar na tela inicial</button>'}</div>
+  <div class="sec2">Lembrete diário</div>
+  <div class="row2"><div><label for="s-time">Horário</label><input id="s-time" type="time" value="${esc(S.settings.reminderTime)}"></div><div></div></div>
+  <div class="chips">${[['seg-sab','Seg a Sáb'],['seg-sex','Seg a Sex'],['todos','Todo dia']].map(([k,l])=>`<button type="button" class="chip ${k===S.settings.reminderDays?'on':''}" data-act="rdays" data-d="${k}">${l}</button>`).join('')}</div>
+  <div class="actions" style="margin-top:12px"><button class="btn" data-act="reminder">Adicionar lembrete ao calendário</button></div>
+  <div class="hint">Cria um evento que se repete e avisa no horário, pelo calendário do celular.</div>
+  <div class="sec2">Seus dados</div>
+  <div class="hint" style="margin-top:6px">Os dados ficam só neste celular. Faça o backup de vez em quando.</div>
   <div class="actions"><button class="btn ghost" data-act="export">Salvar backup</button><button class="btn ghost" data-act="import">Restaurar backup</button></div>
   <input id="s-file" type="file" accept="application/json,.json" hidden>
   <div class="actions" style="margin-top:10px"><button class="btn ghost" data-act="wipe">Apagar todos os dados</button></div>
@@ -530,6 +547,11 @@ document.addEventListener('click',e=>{
   case'settings':SND.tap();openSettings();break;
   case'sound':{S.settings.sound=!S.settings.sound;save();fillHeader();if(S.settings.sound)SND.save();break}
   case'clear-demo':arm(el,'Toque de novo',()=>{S.items=[];S.settings.demo=false;save();SND.close();render();toast('Pronto, começando do zero')});break;
+  case'install':SND.tap();doInstall();break;
+  case'dismiss-install':{SND.tap();S.settings.installDismissed=true;save();const c=el.closest('.card');if(c&&!reduce){c.classList.add('out');setTimeout(render,240)}else render();break}
+  case'copylink':{SND.tap();try{navigator.clipboard.writeText(location.href.split('#')[0]).then(()=>toast('Link copiado ✓'))}catch(e){toast('Não deu para copiar o link')}break}
+  case'rdays':SND.tap();S.settings.reminderDays=el.dataset.d;save();$$('[data-act="rdays"]').forEach(c=>c.classList.toggle('on',c===el));break;
+  case'reminder':SND.save();addReminder();break;
   case'export':SND.tap();exportData();break;
   case'import':SND.tap();$('#s-file').click();break;
   case'wipe':arm(el,'Toque de novo para apagar tudo',()=>{S.items=[];S.settings.demo=false;save();SND.close();closeSheet(true);render();toast('Todos os dados foram apagados')});break;
@@ -540,11 +562,67 @@ document.addEventListener('input',e=>{
  if(t.id==='q'){view.q=t.value;fillAp(false)}
  else if(t.id==='s-shop'){S.settings.shop=t.value.trim()||DEF.shop;save();$('#shopname').textContent=S.settings.shop}
  else if(t.id==='s-google'){S.settings.google=t.value;save()}
+ else if(t.id==='s-time'){S.settings.reminderTime=t.value||'08:30';save()}
  else if(t.id==='s-days'){const n=Math.min(365,Math.max(15,parseInt(t.value,10)||DEF.returnDays));S.settings.returnDays=n;save()}
 });
 document.addEventListener('change',e=>{if(e.target.id==='s-file'&&e.target.files[0])importData(e.target.files[0])});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
 document.addEventListener('pointerdown',()=>ac(),{once:true});
+
+/* ---------- instalar como app + lembrete no calendário ---------- */
+const UA=navigator.userAgent||'';
+const isIOS=/iphone|ipad|ipod/i.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAndroid=/android/i.test(UA);
+const inApp=/FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)/i.test(UA);
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e});
+window.addEventListener('appinstalled',()=>{deferredInstall=null;SND.done();toast('App instalado ✓ Procure o ícone na tela inicial');render()});
+async function doInstall(){
+ if(isStandalone()){toast('O app já está instalado ✓');return}
+ if(deferredInstall){
+  const ev=deferredInstall;deferredInstall=null;
+  try{ev.prompt();await ev.userChoice}catch(e){}
+  return;
+ }
+ openInstallHelp();
+}
+function openInstallHelp(){
+ const share='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+ let steps,extra='';
+ if(inApp){
+  steps=['Você está dentro de outro app (WhatsApp, Instagram…). Toque em <b>⋮</b> ou em <b>Compartilhar</b> e escolha <b>Abrir no navegador</b>.',`Depois, no ${isIOS?'Safari':'Chrome'}, toque em <b>Instalar</b> de novo.`];
+  extra='<div class="actions" style="margin-top:6px"><button class="btn ghost" data-act="copylink">Copiar o link</button></div>';
+ }else if(isIOS)steps=[`Toque no botão <b>Compartilhar</b> ${share} na barra do Safari (embaixo da tela).`,'Role a lista e toque em <b>Adicionar à Tela de Início</b>.','Toque em <b>Adicionar</b>. O ícone aparece na tela inicial.'];
+ else if(isAndroid)steps=['Toque nos <b>três pontinhos ⋮</b> no canto do Chrome.','Toque em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>).','Confirme em <b>Instalar</b>.'];
+ else steps=['Na barra de endereço do navegador, clique no ícone de <b>instalar</b> (um monitor com uma seta).','Confirme em <b>Instalar</b>.'];
+ openSheet(`<h2>Instalar como app</h2><div class="sub">Fica na tela inicial, abre em tela cheia e funciona até sem internet.</div><ol class="steps">${steps.map(s=>`<li><span>${s}</span></li>`).join('')}</ol>${extra}<div class="actions"><button class="btn" data-act="close">Entendi</button></div>`);
+}
+function buildICS(){
+ const [hh,mm]=String(S.settings.reminderTime||'08:30').split(':').map(Number);
+ const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh||0,mm||0,0);
+ if(start<=now)start.setDate(start.getDate()+1);
+ const okDay=d=>S.settings.reminderDays==='seg-sab'?d!==0:S.settings.reminderDays==='seg-sex'?d>0&&d<6:true;
+ while(!okDay(start.getDay()))start.setDate(start.getDate()+1);
+ const end=new Date(start.getTime()+10*60000),p2=n=>String(n).padStart(2,'0');
+ const loc=d=>`${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}T${p2(d.getHours())}${p2(d.getMinutes())}00`;
+ const utc=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+ const url=location.href.split('#')[0].split('?')[0];
+ const rr={'seg-sab':'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA','seg-sex':'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR'}[S.settings.reminderDays]||'FREQ=DAILY';
+ const tx=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+ const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Painel de Consertos//PT-BR','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
+  `UID:painel-consertos-lembrete@${location.host||'local'}`,`DTSTAMP:${utc}`,`DTSTART:${loc(start)}`,`DTEND:${loc(end)}`,`RRULE:${rr}`,
+  `SUMMARY:${tx('Abrir o Painel de Consertos')}`,`DESCRIPTION:${tx('Veja o que sai hoje e avise os clientes. Abrir: '+url)}`,`URL:${url}`,
+  'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${tx('Painel de Consertos')}`,'TRIGGER:PT0S','END:VALARM','END:VEVENT','END:VCALENDAR'];
+ const fold=l=>{const c=Array.from(l);if(c.length<=60)return l;const out=[];for(let i=0;i<c.length;i+=i?59:60)out.push((i?' ':'')+c.slice(i,i+(i?59:60)).join(''));return out.join('\r\n')};
+ return lines.map(fold).join('\r\n')+'\r\n';
+}
+async function addReminder(){
+ const blob=new Blob([buildICS()],{type:'text/calendar;charset=utf-8'}),name='lembrete-painel-de-consertos.ics';
+ if(isIOS&&isStandalone()){try{const f=new File([blob],name,{type:'text/calendar'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Lembrete do Painel de Consertos'});return}}catch(e){if(e&&e.name==='AbortError')return}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+ toast('Abra o arquivo baixado para salvar no calendário');
+}
 
 /* ---------- início ---------- */
 S=load()||seed();
