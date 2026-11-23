@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#060b1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Consertos">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Painel de Consertos</title>
+<style>
+:root{--bg:#060b1f;--card:rgba(255,255,255,.045);--line:rgba(140,165,255,.16);--acc:#4f7cff;--acc2:#7aa8ff;--ok:#34d399;--warn:#fbbf24;--bad:#fb7185;--tx:#e9eeff;--mu:#8f9bc4;--r:18px;--ease:cubic-bezier(.22,.8,.24,1)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;touch-action:manipulation;-webkit-text-size-adjust:100%}
+body{overflow:hidden}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(900px 520px at 85% -8%,rgba(79,124,255,.30),transparent 60%),radial-gradient(700px 520px at -10% 42%,rgba(40,80,200,.22),transparent 60%),var(--bg)}
+.app{position:relative;max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+header{display:flex;align-items:center;gap:8px;padding:14px 16px 8px}
+.ttl{flex:1;min-width:0}
+header h1{font-size:26px;margin:0;font-weight:750;letter-spacing:-.03em;line-height:1.1}
+.sub{color:var(--mu);font-size:13px}
+.ibtn{width:40px;height:40px;flex:none;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--tx);display:grid;place-items:center;cursor:pointer;transition:transform .15s var(--ease),background .2s}
+.ibtn:active{transform:scale(.9)}
+.ibtn svg{width:20px;height:20px}
+main{flex:1;position:relative;overflow:hidden}
+.screen{position:absolute;inset:0;overflow-y:auto;padding:6px 16px 130px;-webkit-overflow-scrolling:touch;display:none}
+.screen.on{display:block}
+@keyframes inR{from{opacity:0;transform:translate3d(20px,0,0)}to{opacity:1;transform:none}}
+@keyframes inL{from{opacity:0;transform:translate3d(-20px,0,0)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:none}}
+@keyframes flash{0%{background:rgba(52,211,153,.22)}100%{background:var(--card)}}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.screen.inR{animation:inR .34s var(--ease)}
+.screen.inL{animation:inL .34s var(--ease)}
+.rv{animation:rise .45s var(--ease) both;animation-delay:calc(var(--i,0)*50ms)}
+.rise1{animation:rise .35s var(--ease)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.card.out{transition:transform .25s var(--ease),opacity .25s;opacity:0;transform:translateX(26px) scale(.98)}
+.hero h2{margin:2px 0 2px;font-size:24px;letter-spacing:-.02em}
+.mu{color:var(--mu)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{border:1px solid var(--line);border-radius:14px;padding:10px 8px;background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:2px}
+.stat b{font-size:26px;line-height:1;letter-spacing:-.02em}
+.stat span{font-size:11.5px;color:var(--mu)}
+.stat.ok b{color:var(--ok)}.stat.bad b{color:var(--bad)}
+h3.sec{margin:18px 2px 8px;font-size:13px;font-weight:650;color:var(--mu);text-transform:uppercase;letter-spacing:.08em}
+.it{display:flex;flex-direction:column;gap:10px;cursor:pointer}
+.it.flash{animation:flash .9s ease-out}
+.it .top{display:flex;justify-content:space-between;gap:10px}
+.it .nm{font-weight:650;font-size:16px}
+.it .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.price{font-weight:700}
+.badge{font-size:11px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);white-space:nowrap;color:var(--mu)}
+.badge.ok{color:var(--ok);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+.badge.warn{color:var(--warn);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+.badge.bad{color:var(--bad);border-color:rgba(251,113,133,.4);background:rgba(251,113,133,.08)}
+.actions{display:flex;gap:8px}
+.btn{flex:1;border:0;border-radius:13px;padding:12px;font:inherit;font-weight:650;color:#fff;background:linear-gradient(180deg,#5b86ff,#3f6af0);box-shadow:0 8px 20px -8px rgba(79,124,255,.8);cursor:pointer;transition:transform .15s var(--ease),filter .2s,opacity .2s}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.5;box-shadow:none}
+.btn.ghost{background:var(--card);border:1px solid var(--line);box-shadow:none;color:var(--tx)}
+.btn.ok{background:linear-gradient(180deg,#3ddc9c,#1fb87d);box-shadow:0 8px 20px -8px rgba(52,211,153,.7)}
+.btn.armed{background:linear-gradient(180deg,#fb7185,#e11d48);color:#fff;border-color:transparent}
+.btn.sm{flex:none;padding:9px 14px;font-size:13px}
+.empty{text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:22px 14px;color:var(--mu)}
+.empty .btn{flex:none;padding:12px 22px}
+.demo{display:flex;align-items:center;gap:12px;justify-content:space-between;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.07)}
+.demo p{margin:0;font-size:13px}
+.seg{position:relative;display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border:1px solid var(--line);border-radius:15px;padding:4px;margin:4px 0 10px}
+.seg button{position:relative;z-index:1;border:0;background:none;color:var(--mu);font:inherit;font-size:13px;font-weight:600;padding:9px 2px;cursor:pointer;transition:color .25s}
+.seg button.on{color:#fff}
+.seg button i{font-style:normal;opacity:.7;margin-left:3px}
+.pill{position:absolute;border-radius:12px;background:linear-gradient(180deg,rgba(91,134,255,.40),rgba(63,106,240,.24));border:1px solid rgba(122,168,255,.38);will-change:transform}
+.seg .pill{top:4px;bottom:4px;left:4px;width:calc((100% - 8px)/3)}
+input,select{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--tx);border-radius:13px;padding:12px;font:inherit;font-size:16px;outline:none;transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:var(--acc2);box-shadow:0 0 0 3px rgba(79,124,255,.25)}
+input.bad{border-color:var(--bad);animation:shake .3s}
+.search{margin-bottom:12px}
+nav{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);background:rgba(13,21,52,.94);border:1px solid var(--line);border-radius:22px;padding:6px;z-index:5;box-shadow:0 18px 40px -12px rgba(0,0,0,.6)}
+nav .pill{top:6px;bottom:6px;left:6px;width:calc((100% - 12px)/4);border-radius:16px}
+.tab{position:relative;z-index:1;border:0;background:none;color:var(--mu);padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;font:inherit;font-size:11px;font-weight:650;cursor:pointer;transition:color .25s}
+.tab.on{color:#fff}
+.tab svg{width:22px;height:22px}
+.fade{position:absolute;left:0;right:0;bottom:0;height:calc(104px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(6,11,31,0),rgba(6,11,31,.92) 62%,#060b1f);pointer-events:none;z-index:3}
+.fab{position:absolute;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));width:54px;height:54px;border-radius:18px;border:0;color:#fff;background:linear-gradient(180deg,#5b86ff,#3f6af0);box-shadow:0 14px 28px -8px rgba(79,124,255,.85);display:grid;place-items:center;cursor:pointer;z-index:4;transition:transform .3s var(--ease),opacity .25s}
+.fab.hide{transform:scale(.5);opacity:0;pointer-events:none}
+.fab:active{transform:scale(.9) rotate(90deg)}
+.fab svg{width:26px;height:26px}
+.back{position:fixed;inset:0;background:rgba(2,5,18,.62);opacity:0;pointer-events:none;transition:opacity .28s;z-index:20}
+.back.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;width:min(520px,100%);transform:translate(-50%,105%);background:#0c1433;border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));z-index:21;transition:transform .4s var(--ease);max-height:92%;overflow-y:auto;will-change:transform}
+.sheet.on{transform:translate(-50%,0)}
+.grab{width:42px;height:4px;border-radius:9px;background:rgba(255,255,255,.2);margin:0 auto 12px}
+.sheet h2{margin:0 0 4px;font-size:20px;letter-spacing:-.02em}
+label{display:block;font-size:12px;color:var(--mu);margin:12px 0 5px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.chip{padding:8px 13px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--tx);font:inherit;font-size:13px;cursor:pointer;transition:background .2s,border-color .2s}
+.chip.on{border-color:var(--acc2);background:rgba(79,124,255,.24)}
+.sheet .actions{margin-top:18px}
+.hint{font-size:12px;color:var(--mu);margin:6px 2px 0}
+.toast{position:fixed;left:50%;bottom:calc(98px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;background:#16224d;border:1px solid var(--line);padding:10px 16px;border-radius:14px;z-index:30;transition:transform .35s var(--ease),opacity .3s;pointer-events:none;max-width:90%;text-align:center;font-size:14px}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.big{font-size:44px;font-weight:780;letter-spacing:-.03em;line-height:1}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.kpi{border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.03)}
+.kpi b{display:block;font-size:20px;letter-spacing:-.02em}
+.kpi span{font-size:11.5px;color:var(--mu)}
+.bars{display:flex;align-items:flex-end;gap:10px;height:128px;margin-top:12px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;font-size:11px;color:var(--mu)}
+.bar em{font-style:normal;color:var(--tx);font-weight:650}
+.bar i{display:block;width:100%;border-radius:9px 9px 4px 4px;background:linear-gradient(180deg,#7aa8ff,#3f6af0);transform-origin:bottom;transform:scaleY(0);transition:transform .9s var(--ease);transition-delay:calc(var(--i)*80ms)}
+.go .bar i{transform:scaleY(1)}
+.accent{border-color:rgba(122,168,255,.45);background:linear-gradient(180deg,rgba(79,124,255,.16),rgba(79,124,255,.05))}
+.cli{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.cli .btn{flex:none}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="app" id="app">
+  <header>
+    <div class="ttl"><h1 id="title">Hoje</h1><div class="sub" id="shopname"></div></div>
+    <button class="ibtn" data-act="sound" id="btn-sound" aria-label="Som"></button>
+    <button class="ibtn" data-act="settings" id="btn-set" aria-label="Ajustes"></button>
+  </header>
+  <main>
+    <section class="screen" id="s-hoje"></section>
+    <section class="screen" id="s-aparelhos"></section>
+    <section class="screen" id="s-clientes"></section>
+    <section class="screen" id="s-numeros"></section>
+  </main>
+  <div class="fade"></div>
+  <button class="fab" data-act="new" id="fab" aria-label="Novo conserto"></button>
+  <nav id="nav"><div class="pill"></div></nav>
+</div>
+<div class="back" id="back" data-act="close"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheet-body"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const KEY='painel-consertos-v1',DAY=864e5;
+const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const ds=ts=>{const d=new Date(ts);d.setHours(0,0,0,0);return d.getTime()};
+const t0=()=>ds(Date.now());
+const addDays=(n,base=t0())=>{const d=new Date(base);d.setDate(d.getDate()+n);return d.getTime()};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=n=>'R$ '+(+n||0).toLocaleString('pt-BR',{minimumFractionDigits:(+n||0)%1?2:0,maximumFractionDigits:2});
+const fmt=ts=>{const d=new Date(ts);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')};
+const dIn=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fromIn=v=>{const [y,m,d]=v.split('-').map(Number);return new Date(y,m-1,d).getTime()};
+const digits=s=>String(s||'').replace(/\D/g,'');
+const fmtPhone=p=>{let d=digits(p);if(d.startsWith('55')&&d.length>=12)d=d.slice(2);if(d.length===11)return`(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return`(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return d};
+const first=n=>String(n||'').trim().split(/\s+/)[0]||'cliente';
+const parsePrice=v=>{v=String(v||'').trim();if(!v)return 0;const n=v.includes(',')?parseFloat(v.replace(/\./g,'').replace(',','.')):parseFloat(v);return isFinite(n)?n:0};
+const plural=(n,a,b)=>n===1?a:b;
+
+/* ---------- ícones ---------- */
+const svg=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const IC={
+ hoje:svg('<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'),
+ aparelhos:svg('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>'),
+ clientes:svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.6.2 4.2 1.8 4.7 4.5"/>'),
+ numeros:svg('<path d="M5 20V11M12 20V4M19 20v-7"/>'),
+ gear:svg('<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'),
+ volOn:svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>'),
+ volOff:svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l4 6M21 9l-4 6"/>'),
+ plus:svg('<path d="M12 5v14M5 12h14"/>')
+};
+const TABS=['hoje','aparelhos','clientes','numeros'];
+const TITLES={hoje:'Hoje',aparelhos:'Aparelhos',clientes:'Clientes',numeros:'Números'};
+
+/* ---------- dados ---------- */
+const DEF={shop:'Assistência da Carol',google:'',sound:true,returnDays:60,demo:false};
+let S;
+const load=()=>{try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);if(o&&Array.isArray(o.items))return o}}catch(e){}return null};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+function seed(){
+ const d=n=>addDays(-n),P=n=>'555199999'+String(1000+n);
+ const mk=(i,name,device,issue,price,status,due,picked,extra={})=>({id:'d'+i,demo:true,name,phone:P(i),device,issue,price,status,due,created:(picked||due)-2*DAY,readyAt:status==='andamento'?null:(picked?picked-DAY:d(1)),pickedAt:picked||null,reviewAsked:false,recallAt:null,...extra});
+ return {settings:{...DEF,demo:true},items:[
+  mk(1,'Marina Souza','iPhone 11','Troca de tela',380,'andamento',d(0)),
+  mk(2,'Rafael Lima','Galaxy A32','Troca de bateria',150,'andamento',d(-1)),
+  mk(3,'Joana Pires','Moto G22','Conector de carga',120,'pronto',d(1)),
+  mk(4,'Carlos Mendes','iPhone XR','Troca de tela',320,'andamento',d(1)),
+  mk(5,'Paulo Ramos','Redmi Note 10','Não liga',200,'retirado',d(0),d(3),{reviewAsked:true}),
+  mk(6,'Ana Luiza Prado','Galaxy S21','Troca de tela',450,'retirado',d(75),d(75)),
+  mk(7,'Bruno Teixeira','iPhone 12','Troca de bateria',280,'retirado',d(95),d(95)),
+  mk(8,'Fernanda Costa','Moto E7','Conector de carga',110,'retirado',d(130),d(130)),
+  mk(9,'Marina Souza','Galaxy A10','Troca de tela',260,'retirado',d(150),d(150),{phone:P(1)}),
+  mk(10,'Diego Alves','Galaxy A52','Troca de tela',340,'retirado',d(20),d(20),{reviewAsked:true}),
+  mk(11,'Larissa Rocha','iPhone 11','Troca de bateria',270,'retirado',d(33),d(33)),
+  mk(12,'Tiago Nunes','Moto G60','Não carrega',140,'retirado',d(48),d(48)),
+  mk(13,'Camila Duarte','Redmi 9','Troca de tela',230,'retirado',d(110),d(110)),
+  mk(14,'Eduardo Silva','Galaxy A12','Troca de bateria',130,'retirado',d(160),d(160))
+ ]};
+}
+const key=it=>{const d=digits(it.phone).slice(-10);return d.length>=8?d:'n:'+String(it.name||'').trim().toLowerCase()};
+function customers(){
+ const m=new Map();
+ for(const it of S.items){const k=key(it);if(!m.has(k))m.set(k,{key:k,items:[]});m.get(k).items.push(it)}
+ const out=[];
+ for(const c of m.values()){
+  c.items.sort((a,b)=>(b.pickedAt||b.created||0)-(a.pickedAt||a.created||0));
+  c.name=c.items[0].name;c.phone=c.items[0].phone;
+  c.last=c.items.find(x=>x.status==='retirado')||null;
+  c.open=c.items.some(x=>x.status!=='retirado');
+  c.picked=c.items.filter(x=>x.status==='retirado').length;
+  out.push(c);
+ }
+ return out;
+}
+const toRecall=()=>{const lim=Date.now()-S.settings.returnDays*DAY;return customers().filter(c=>c.last&&!c.open&&c.last.pickedAt<=lim).sort((a,b)=>b.last.pickedAt-a.last.pickedAt)};
+
+/* ---------- sons (Web Audio, sem arquivos) ---------- */
+let AC=null;
+const ac=()=>{if(!S||!S.settings.sound)return null;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}catch(e){return null}};
+const tone=(f,at,dur,vol=.06,type='sine',f2)=>{const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.03)};
+const SND={
+ tap:()=>tone(900,0,.05,.035,'triangle'),
+ tab:()=>tone(420,0,.12,.04,'sine',680),
+ open:()=>tone(520,0,.13,.04,'sine',800),
+ close:()=>tone(720,0,.11,.03,'sine',430),
+ save:()=>{tone(660,0,.1,.05);tone(880,.09,.16,.05)},
+ done:()=>{[523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(f,i*.075,.38,.06))},
+ warn:()=>tone(300,0,.18,.05,'triangle',190)
+};
+const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+
+/* ---------- ui helpers ---------- */
+let animateNext=false;
+const R=i=>animateNext?` rv" style="--i:${i}`:'';
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2600)}
+function slide(pill,a,b){
+ const to=`translateX(${b*100}%)`;pill.style.transform=to;
+ if(a===b||a<0||reduce||!pill.animate)return;
+ const mid=`translateX(${(a+b)/2*100}%) scaleX(${1+Math.abs(b-a)*.3})`;
+ pill.animate([{transform:`translateX(${a*100}%)`},{transform:mid,offset:.45},{transform:to}],{duration:480,easing:'cubic-bezier(.22,.8,.24,1)'});
+}
+function arm(el,label,fn){
+ if(el.dataset.armed){fn();return}
+ el.dataset.armed='1';const old=el.textContent;el.textContent=label;el.classList.add('armed');
+ setTimeout(()=>{delete el.dataset.armed;el.textContent=old;el.classList.remove('armed')},3000);
+}
+function countUp(root){
+ $$('[data-count]',root).forEach(el=>{
+  const n=+el.dataset.count,mon=el.dataset.money;
+  const show=(v,exact)=>mon?brl(exact?v:Math.round(v)):String(Math.round(v));
+  if(reduce||!animateNext||!n){el.textContent=show(n,true);return}
+  const st=performance.now(),dur=800;
+  (function f(now){const p=Math.min(1,(now-st)/dur),e=1-Math.pow(1-p,3);el.textContent=show(p<1?n*e:n,p>=1);if(p<1)requestAnimationFrame(f)})(st);
+ });
+}
+
+/* ---------- mensagens WhatsApp ---------- */
+const waURL=(phone,text)=>{let d=digits(phone);const n=d.length>=10?(d.startsWith('55')&&d.length>=12?d:'55'+d):'';return'https://wa.me/'+n+'?text='+encodeURIComponent(text)};
+const openWA=u=>{const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()};
+const googleLink=()=>{let g=(S.settings.google||'').trim();if(g&&!/^https?:\/\//i.test(g))g='https://'+g;return g};
+const msgReady=it=>`Olá, ${first(it.name)}! Aqui é da ${S.settings.shop}. Seu ${it.device} já está pronto 🎉 Pode retirar quando quiser. Qualquer dúvida é só chamar!`;
+const msgReview=it=>`Oi, ${first(it.name)}! Obrigado por confiar na ${S.settings.shop} 💙 Se ficou tudo certo com o conserto do seu ${it.device}, você pode deixar uma avaliação rapidinha? Ajuda muito a gente: ${googleLink()}`;
+const msgRecall=c=>`Oi, ${first(c.name)}! Aqui é da ${S.settings.shop}. Já faz um tempinho que cuidamos do seu ${c.last.device}. Como ele está? Se precisar de qualquer coisa, ou quiser ver películas e capinhas novas, é só chamar 😉`;
+const waTo=(it,text)=>openWA(waURL(it.demo?'':it.phone,text));
+
+/* ---------- telas ---------- */
+const view={seg:'andamento',q:''};
+function badge(it){
+ const T=t0();
+ if(it.status==='andamento'){const dd=Math.round((ds(it.due)-T)/DAY);if(dd<0)return`<span class="badge bad">Atrasado ${-dd}d</span>`;if(dd===0)return'<span class="badge warn">Entrega hoje</span>';return`<span class="badge">Entrega ${fmt(it.due)}</span>`}
+ if(it.status==='pronto'){const d=Math.max(0,Math.round((T-ds(it.readyAt||T))/DAY));return`<span class="badge ok">Pronto${d?' há '+d+'d':''}</span>`}
+ return`<span class="badge">Retirado ${fmt(it.pickedAt)}</span>`;
+}
+function itemCard(it,i){
+ let btns='';
+ if(it.status==='andamento')btns='<button class="btn ok" data-act="ready">✓ Aparelho pronto</button>';
+ else if(it.status==='pronto')btns='<button class="btn" data-act="pickup">Cliente retirou</button><button class="btn ghost" data-act="renotify">Avisar de novo</button>';
+ else btns=it.reviewAsked?'<button class="btn ghost" disabled>Avaliação pedida ✓</button>':'<button class="btn" data-act="review">Pedir avaliação no Google</button>';
+ const ph=fmtPhone(it.phone);
+ return`<div class="card it${R(i)}" data-id="${esc(it.id)}" data-act="edit">
+  <div class="top"><div><div class="nm">${esc(it.name)}</div><div class="sub">${esc(it.device)} · ${esc(it.issue||'—')}</div></div>
+  <div class="r"><div class="price">${brl(it.price)}</div>${badge(it)}</div></div>
+  ${ph?`<div class="sub">${esc(ph)}</div>`:''}
+  <div class="actions">${btns}</div></div>`;
+}
+function rHoje(){
+ const T=t0(),it=S.items;
+ const and=it.filter(x=>x.status==='andamento'),pro=it.filter(x=>x.status==='pronto');
+ const late=and.filter(x=>ds(x.due)<T),today=and.filter(x=>ds(x.due)===T);
+ const list=[...late,...today].sort((a,b)=>a.due-b.due);
+ const hr=new Date().getHours(),greet=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';
+ let dateStr=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});dateStr=dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
+ let sum;
+ if(!it.length)sum='Cadastre o primeiro conserto pra começar.';
+ else if(list.length)sum=`${list.length} ${plural(list.length,'aparelho','aparelhos')} pra entregar hoje${late.length?` (${late.length} ${plural(late.length,'atrasado','atrasados')})`:''}.`;
+ else sum='Nada pendente pra hoje. 🎉';
+ let i=0,h='';
+ if(S.settings.demo)h+=`<div class="card demo${R(i++)}"><p><b>Dados de exemplo.</b> Toque pra apagar e começar com os seus.</p><button class="btn sm ghost" data-act="clear-demo">Começar do zero</button></div>`;
+ h+=`<div class="card hero${R(i++)}"><div class="mu cap">${esc(dateStr)}</div><h2>${greet}!</h2><div class="mu">${esc(sum)}</div>
+  <div class="stats"><div class="stat"><b data-count="${and.length}">${and.length}</b><span>Em andamento</span></div>
+  <div class="stat ok"><b data-count="${pro.length}">${pro.length}</b><span>Prontos</span></div>
+  <div class="stat ${late.length?'bad':''}"><b data-count="${late.length}">${late.length}</b><span>Atrasados</span></div></div></div>`;
+ if(!it.length)h+=`<div class="card empty${R(i++)}"><div>Nenhum conserto cadastrado ainda.</div><button class="btn" data-act="new">Cadastrar o primeiro</button></div>`;
+ if(list.length){h+=`<h3 class="sec${R(i++)}">Pra entregar hoje</h3>`;list.forEach(x=>h+=itemCard(x,i++))}
+ if(pro.length){h+=`<h3 class="sec${R(i++)}">Esperando retirada</h3>`;pro.forEach(x=>h+=itemCard(x,i++))}
+ return h;
+}
+function apList(){
+ const q=view.q.trim().toLowerCase();
+ let l;
+ if(q)l=S.items.filter(x=>(x.name+' '+x.device+' '+x.issue+' '+digits(x.phone)).toLowerCase().includes(q));
+ else l=S.items.filter(x=>x.status===view.seg);
+ const sorters={andamento:(a,b)=>a.due-b.due,pronto:(a,b)=>(b.readyAt||0)-(a.readyAt||0),retirado:(a,b)=>(b.pickedAt||0)-(a.pickedAt||0)};
+ l=l.sort(q?(a,b)=>(b.created||0)-(a.created||0):sorters[view.seg]).slice(0,40);
+ if(!l.length)return`<div class="card empty${R(0)}"><div>${q?'Nada encontrado.':'Nada por aqui ainda.'}</div>${!q&&view.seg==='andamento'?'<button class="btn" data-act="new">Novo conserto</button>':''}</div>`;
+ return l.map((x,i)=>itemCard(x,i)).join('');
+}
+function rAp(){
+ const c=s=>S.items.filter(x=>x.status===s).length;
+ const segs=[['andamento','Em andamento'],['pronto','Prontos'],['retirado','Retirados']];
+ return`<div class="seg"><div class="pill"></div>${segs.map(([k,l])=>`<button data-act="seg" data-seg="${k}" class="${k===view.seg?'on':''}">${l}<i>${c(k)}</i></button>`).join('')}</div>
+  <input class="search" id="q" type="search" placeholder="Buscar cliente, aparelho ou telefone" value="${esc(view.q)}" autocomplete="off">
+  <div id="ap-list">${apList()}</div>`;
+}
+function fillAp(anim){
+ const was=animateNext;animateNext=!!anim;
+ $('#ap-list').innerHTML=apList();
+ animateNext=was;
+ $$('#s-aparelhos .seg button').forEach(b=>{b.classList.toggle('on',b.dataset.seg===view.seg);const k=b.dataset.seg;b.querySelector('i').textContent=S.items.filter(x=>x.status===k).length});
+}
+function rCli(){
+ const rec=toRecall(),all=customers().sort((a,b)=>(b.items[0].created||0)-(a.items[0].created||0));
+ let i=0,h=`<div class="card hero accent${R(i++)}"><div class="big" data-count="${rec.length}">${rec.length}</div>
+  <div style="margin-top:6px"><b>${plural(rec.length,'cliente não volta','clientes não voltam')} há mais de ${S.settings.returnDays} dias</b></div>
+  <div class="mu">${rec.length?'Todos já compraram de você uma vez. Uma mensagem leva 5 segundos.':'Ninguém pra chamar de volta agora.'}</div></div>`;
+ rec.forEach(c=>{
+  const days=Math.round((t0()-ds(c.last.pickedAt))/DAY);
+  h+=`<div class="card it${R(i++)}" data-key="${esc(c.key)}"><div class="top"><div><div class="nm">${esc(c.name)}</div>
+   <div class="sub">${esc(c.last.device)} · ${esc(c.last.issue||'—')} · há ${days} dias</div></div>
+   <div class="r"><div class="price">${brl(c.last.price)}</div>${c.last.recallAt?`<span class="badge ok">Chamado ${fmt(c.last.recallAt)}</span>`:''}</div></div>
+   <div class="actions"><button class="btn" data-act="recall">${c.last.recallAt?'Chamar de novo':'Chamar no WhatsApp'}</button></div></div>`;
+ });
+ if(all.length){
+  h+=`<h3 class="sec${R(i++)}">Todos os clientes (${all.length})</h3>`;
+  all.slice(0,25).forEach(c=>{h+=`<div class="card cli${R(i++)}"><div><div class="nm">${esc(c.name)}</div><div class="sub">${esc(fmtPhone(c.phone)||'sem telefone')}</div></div><span class="badge ${c.items.length>1?'ok':''}">${c.items.length} ${plural(c.items.length,'conserto','consertos')}</span></div>`});
+ }
+ return h;
+}
+function rNum(){
+ const now=new Date(),done=S.items.filter(x=>x.status==='retirado'&&x.pickedAt);
+ const inMonth=(ts,m)=>{const d=new Date(ts);return d.getFullYear()===m.getFullYear()&&d.getMonth()===m.getMonth()};
+ const cur=done.filter(x=>inMonth(x.pickedAt,now));
+ const fat=cur.reduce((s,x)=>s+(+x.price||0),0);
+ const ticket=done.length?done.reduce((s,x)=>s+(+x.price||0),0)/done.length:0;
+ const cs=customers(),back=cs.filter(c=>c.items.length>1).length,rec=toRecall().length;
+ const asked=S.items.filter(x=>x.reviewAsked).length;
+ const months=[];for(let k=5;k>=0;k--){const m=new Date(now.getFullYear(),now.getMonth()-k,1);months.push({l:MES[m.getMonth()],n:done.filter(x=>inMonth(x.pickedAt,m)).length})}
+ const mx=Math.max(1,...months.map(m=>m.n));
+ let i=0;
+ return`<div class="card hero${R(i++)}"><div class="mu">Neste mês</div><div class="big" data-count="${fat}" data-money="1">${brl(fat)}</div>
+  <div class="kpis"><div class="kpi"><b data-count="${cur.length}">${cur.length}</b><span>${plural(cur.length,'conserto entregue','consertos entregues')}</span></div>
+  <div class="kpi"><b data-count="${Math.round(ticket)}" data-money="1">${brl(Math.round(ticket))}</b><span>ticket médio</span></div></div></div>
+  <div class="card${R(i++)}"><b>Consertos entregues por mês</b><div class="bars ${animateNext?'':'go'}">${months.map((m,k)=>`<div class="bar" style="--i:${k}"><em>${m.n}</em><i style="height:${Math.max(4,Math.round(m.n/mx*84))}px"></i><span>${m.l}</span></div>`).join('')}</div></div>
+  <div class="card accent${R(i++)}"><div class="big" data-count="${rec}">${rec}</div><div style="margin-top:6px"><b>${plural(rec,'cliente sem voltar','clientes sem voltar')} há mais de ${S.settings.returnDays} dias</b></div>
+  <div class="mu">${back} de ${cs.length} ${plural(cs.length,'cliente voltou','clientes voltaram')} mais de uma vez.</div>
+  <div class="actions" style="margin-top:12px"><button class="btn" data-act="tab" data-tab="clientes">Ver quem chamar</button></div></div>
+  <div class="card${R(i++)}"><div class="cli"><div><b>${asked} ${plural(asked,'avaliação pedida','avaliações pedidas')}</b><div class="sub">${googleLink()?'Link do Google configurado ✓':'Falta o link do Google em Ajustes'}</div></div>
+  ${googleLink()?'':'<button class="btn sm ghost" data-act="settings">Ajustes</button>'}</div></div>`;
+}
+const RENDER={hoje:rHoje,aparelhos:rAp,clientes:rCli,numeros:rNum};
+let cur=-1;
+function render(){
+ const name=TABS[cur],sc=$('#s-'+name);
+ sc.innerHTML=RENDER[name]();
+ if(name==='aparelhos'){const sg=$('#s-aparelhos .seg .pill');slide(sg,-1,Math.max(0,['andamento','pronto','retirado'].indexOf(view.seg)))}
+ countUp(sc);
+ const bars=$('.bars',sc);
+ if(bars&&animateNext)requestAnimationFrame(()=>requestAnimationFrame(()=>bars.classList.add('go')));
+ animateNext=false;
+}
+function go(name,silent){
+ const i=TABS.indexOf(name);
+ if(i===cur){$('#s-'+name).scrollTo({top:0,behavior:reduce?'auto':'smooth'});return}
+ const prev=cur,dir=i>prev?'inR':'inL';cur=i;
+ $$('.tab').forEach((b,k)=>b.classList.toggle('on',k===i));
+ $$('.screen').forEach(s=>s.classList.remove('on','inR','inL'));
+ animateNext=true;
+ const sc=$('#s-'+name);sc.classList.add('on');if(prev>=0)sc.classList.add(dir);
+ render();sc.scrollTop=0;
+ slide($('#nav .pill'),prev,i);
+ $('#fab').classList.toggle('hide',i>1);
+ const t=$('#title');t.textContent=TITLES[name];t.classList.remove('rise1');void t.offsetWidth;t.classList.add('rise1');
+ if(!silent)SND.tab();
+}
+
+/* ---------- ações ---------- */
+function mutate(id,fn){
+ const it=S.items.find(x=>x.id===id);if(!it)return;
+ fn(it);save();
+ const el=$(`.screen.on [data-id="${CSS.escape(id)}"]`);
+ const after=()=>{render();if(TABS[cur]==='aparelhos')fillAp(false)};
+ if(el&&!reduce){el.classList.add('out');setTimeout(after,240)}else after();
+}
+const find=id=>S.items.find(x=>x.id===id);
+function doReady(id){const it=find(id);if(!it)return;mutate(id,x=>{x.status='pronto';x.readyAt=Date.now()});SND.done();vib([15,40,15]);toast('Pronto! Abrindo o WhatsApp com a mensagem…');waTo(it,msgReady(it))}
+function doRenotify(id){const it=find(id);if(!it)return;SND.tap();waTo(it,msgReady(it))}
+function doPickup(id){mutate(id,x=>{x.status='retirado';x.pickedAt=Date.now()});SND.save();vib(15);toast('Entrega registrada ✓')}
+function doReview(id){
+ const it=find(id);if(!it)return;
+ if(!googleLink()){SND.warn();toast('Cole o link de avaliação do Google em Ajustes');openSettings();return}
+ mutate(id,x=>{x.reviewAsked=true});SND.save();vib(15);waTo(it,msgReview(it));
+}
+function doRecall(key){
+ const c=customers().find(x=>x.key===key);if(!c||!c.last)return;
+ c.last.recallAt=Date.now();save();SND.done();vib([15,40,15]);
+ waTo(c.last,msgRecall(c));
+ const el=$(`.screen.on [data-key="${CSS.escape(key)}"]`);
+ if(el){const b=$('[data-act="recall"]',el);if(b)b.textContent='Chamar de novo';const r=$('.r',el);if(r&&!$('.badge',r))r.insertAdjacentHTML('beforeend',`<span class="badge ok">Chamado ${fmt(c.last.recallAt)}</span>`)}
+}
+
+/* ---------- sheets ---------- */
+const sheet=$('#sheet'),backdrop=$('#back');
+let editing=null,formStatus='andamento';
+function openSheet(html){$('#sheet-body').innerHTML=html;backdrop.classList.add('on');sheet.classList.add('on');sheet.scrollTop=0;SND.open()}
+function closeSheet(silent){if(!sheet.classList.contains('on'))return;backdrop.classList.remove('on');sheet.classList.remove('on');editing=null;if(!silent)SND.close()}
+function openForm(id){
+ editing=id?find(id):null;
+ const it=editing||{name:'',phone:'',device:'',issue:'',price:'',due:addDays(1),status:'andamento'};
+ formStatus=it.status;
+ const stChips=editing?`<label>Situação</label><div class="chips">${[['andamento','Em andamento'],['pronto','Pronto'],['retirado','Retirado']].map(([k,l])=>`<button type="button" class="chip ${k===formStatus?'on':''}" data-act="stchip" data-st="${k}">${l}</button>`).join('')}</div>`:'';
+ openSheet(`<h2>${editing?'Editar conserto':'Novo conserto'}</h2>
+  <label for="f-name">Cliente</label><input id="f-name" value="${esc(it.name)}" autocomplete="off" autocapitalize="words" placeholder="Nome do cliente">
+  <label for="f-phone">WhatsApp</label><input id="f-phone" type="tel" inputmode="tel" value="${esc(it.phone)}" placeholder="(51) 99999-9999">
+  <label for="f-device">Aparelho</label><input id="f-device" value="${esc(it.device)}" autocomplete="off" placeholder="Ex.: iPhone 11, Galaxy A32">
+  <label for="f-issue">Defeito / serviço</label><input id="f-issue" value="${esc(it.issue)}" autocomplete="off" placeholder="Ex.: troca de tela">
+  <div class="row2"><div><label for="f-price">Valor (R$)</label><input id="f-price" inputmode="decimal" value="${it.price?String(it.price).replace('.',','):''}" placeholder="0"></div>
+  <div><label for="f-due">Prazo</label><input id="f-due" type="date" value="${dIn(it.due)}"></div></div>
+  <div class="chips">${[[0,'Hoje'],[1,'Amanhã'],[3,'3 dias'],[7,'1 semana']].map(([n,l])=>`<button type="button" class="chip" data-act="duechip" data-days="${n}">${l}</button>`).join('')}</div>
+  ${stChips}
+  <div class="actions"><button class="btn ghost" data-act="close">Cancelar</button><button class="btn" data-act="save">Salvar</button></div>
+  ${editing?'<div class="actions" style="margin-top:10px"><button class="btn ghost" data-act="delete">Apagar este conserto</button></div>':''}`);
+ if(!editing&&!reduce)setTimeout(()=>{const f=$('#f-name');if(f&&sheet.classList.contains('on'))f.focus({preventScroll:true})},420);
+}
+function saveForm(){
+ const g=id=>$('#'+id).value.trim();
+ const name=g('f-name'),device=g('f-device');
+ $$('#sheet input').forEach(i=>i.classList.remove('bad'));
+ if(!name||!device){
+  if(!name)$('#f-name').classList.add('bad');if(!device)$('#f-device').classList.add('bad');
+  SND.warn();vib(30);toast('Preencha o cliente e o aparelho');return;
+ }
+ const due=$('#f-due').value?fromIn($('#f-due').value):addDays(1);
+ const data={name,phone:g('f-phone'),device,issue:g('f-issue'),price:parsePrice(g('f-price')),due};
+ if(editing){
+  Object.assign(editing,data);
+  if(formStatus!==editing.status){
+   editing.status=formStatus;
+   if(formStatus==='andamento'){editing.readyAt=null;editing.pickedAt=null}
+   if(formStatus==='pronto'){editing.readyAt=editing.readyAt||Date.now();editing.pickedAt=null}
+   if(formStatus==='retirado'){editing.readyAt=editing.readyAt||Date.now();editing.pickedAt=editing.pickedAt||Date.now()}
+  }
+ }else{
+  S.items.unshift({id:'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),...data,status:'andamento',created:Date.now(),readyAt:null,pickedAt:null,reviewAsked:false,recallAt:null});
+ }
+ save();SND.save();vib(15);closeSheet(true);
+ const wasNew=!editing;
+ setTimeout(()=>{
+  if(wasNew&&TABS[cur]==='aparelhos'){view.seg='andamento';view.q=''}
+  render();
+  if(wasNew){toast('Conserto cadastrado ✓');const first=$('.screen.on .it');if(first&&!reduce)first.classList.add('flash')}
+ },120);
+}
+function openSettings(){
+ openSheet(`<h2>Ajustes</h2>
+  <label for="s-shop">Nome da loja (aparece nas mensagens)</label><input id="s-shop" value="${esc(S.settings.shop)}" autocomplete="off">
+  <label for="s-google">Link de avaliação do Google</label><input id="s-google" inputmode="url" value="${esc(S.settings.google)}" placeholder="Cole aqui o link do Google" autocomplete="off">
+  <div class="hint">É o link que vai na mensagem do botão “Pedir avaliação”.</div>
+  <label for="s-days">Chamar de volta depois de quantos dias?</label><input id="s-days" type="number" inputmode="numeric" min="15" max="365" value="${S.settings.returnDays}">
+  <div class="hint" style="margin-top:14px">Os dados ficam só neste celular. Faça o backup de vez em quando.</div>
+  <div class="actions"><button class="btn ghost" data-act="export">Salvar backup</button><button class="btn ghost" data-act="import">Restaurar backup</button></div>
+  <input id="s-file" type="file" accept="application/json,.json" hidden>
+  <div class="actions" style="margin-top:10px"><button class="btn ghost" data-act="wipe">Apagar todos os dados</button></div>
+  <div class="actions"><button class="btn" data-act="close">Pronto</button></div>`);
+}
+async function exportData(){
+ const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),name=`painel-consertos-${dIn(Date.now())}.json`;
+ try{const file=new File([blob],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Backup do Painel de Consertos'});return}}catch(e){if(e&&e.name==='AbortError')return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Backup salvo ✓');
+}
+function importData(file){
+ const fr=new FileReader();
+ fr.onload=()=>{try{
+  const o=JSON.parse(fr.result);
+  if(!o||!Array.isArray(o.items)||o.items.some(x=>!x||typeof x.name!=='string'||!['andamento','pronto','retirado'].includes(x.status)))throw 0;
+  S={settings:{...DEF,...(o.settings||{})},items:o.items};save();closeSheet(true);fillHeader();render();SND.save();toast('Backup restaurado ✓');
+ }catch(e){SND.warn();toast('Esse arquivo não parece um backup válido')}};
+ fr.readAsText(file);
+}
+function fillHeader(){
+ $('#shopname').textContent=S.settings.shop;
+ $('#btn-sound').innerHTML=S.settings.sound?IC.volOn:IC.volOff;
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click',e=>{
+ const el=e.target.closest('[data-act]');if(!el||el.disabled)return;
+ const act=el.dataset.act,card=el.closest('[data-id]'),id=card&&card.dataset.id;
+ switch(act){
+  case'tab':go(el.dataset.tab);break;
+  case'seg':{const segs=['andamento','pronto','retirado'],a=segs.indexOf(view.seg),b=segs.indexOf(el.dataset.seg);if(a===b)break;view.seg=el.dataset.seg;view.q='';const q=$('#q');if(q)q.value='';slide($('#s-aparelhos .seg .pill'),a,b);fillAp(true);SND.tab();break}
+  case'new':SND.tap();openForm(null);break;
+  case'edit':SND.tap();openForm(id);break;
+  case'ready':doReady(id);break;
+  case'renotify':doRenotify(id);break;
+  case'pickup':doPickup(id);break;
+  case'review':doReview(id);break;
+  case'recall':doRecall(el.closest('[data-key]').dataset.key);break;
+  case'save':saveForm();break;
+  case'close':closeSheet();break;
+  case'duechip':{SND.tap();$('#f-due').value=dIn(addDays(+el.dataset.days));$$('[data-act="duechip"]').forEach(c=>c.classList.toggle('on',c===el));break}
+  case'stchip':{SND.tap();formStatus=el.dataset.st;$$('[data-act="stchip"]').forEach(c=>c.classList.toggle('on',c===el));break}
+  case'delete':arm(el,'Toque de novo para apagar',()=>{S.items=S.items.filter(x=>x!==editing);save();SND.close();closeSheet(true);setTimeout(()=>{render();toast('Conserto apagado')},120)});break;
+  case'settings':SND.tap();openSettings();break;
+  case'sound':{S.settings.sound=!S.settings.sound;save();fillHeader();if(S.settings.sound)SND.save();break}
+  case'clear-demo':arm(el,'Toque de novo',()=>{S.items=[];S.settings.demo=false;save();SND.close();render();toast('Pronto, começando do zero')});break;
+  case'export':SND.tap();exportData();break;
+  case'import':SND.tap();$('#s-file').click();break;
+  case'wipe':arm(el,'Toque de novo para apagar tudo',()=>{S.items=[];S.settings.demo=false;save();SND.close();closeSheet(true);render();toast('Todos os dados foram apagados')});break;
+ }
+});
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(t.id==='q'){view.q=t.value;fillAp(false)}
+ else if(t.id==='s-shop'){S.settings.shop=t.value.trim()||DEF.shop;save();$('#shopname').textContent=S.settings.shop}
+ else if(t.id==='s-google'){S.settings.google=t.value;save()}
+ else if(t.id==='s-days'){const n=Math.min(365,Math.max(15,parseInt(t.value,10)||DEF.returnDays));S.settings.returnDays=n;save()}
+});
+document.addEventListener('change',e=>{if(e.target.id==='s-file'&&e.target.files[0])importData(e.target.files[0])});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+document.addEventListener('pointerdown',()=>ac(),{once:true});
+
+/* ---------- início ---------- */
+S=load()||seed();
+S.settings={...DEF,...S.settings};
+if(!load())save();
+TABS.forEach(t=>{const b=document.createElement('button');b.className='tab';b.dataset.act='tab';b.dataset.tab=t;b.innerHTML=IC[t]+`<span>${TITLES[t]}</span>`;$('#nav').appendChild(b)});
+$('#fab').innerHTML=IC.plus;
+$('#btn-set').innerHTML=IC.gear;
+fillHeader();
+go('hoje',true);
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
